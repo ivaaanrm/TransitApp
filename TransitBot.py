@@ -31,7 +31,7 @@ from transit_data import save_results_to_csv, load_results_from_csv
 load_dotenv()
 
 logging.basicConfig(
-    filename='/Users/ivan/Desktop/Projects-dev/TransitApp/logs.log',
+    filename=os.getenv('PATH_LOGS'),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
@@ -177,7 +177,7 @@ async def main():
     previous_results = resultados    
     message_text = Message.update_traffic_message(resultados)
     await transit_bot.send_message(message_text)
-    save_results_to_csv(os.getenv('PATH_RESULTADOS_CSV'))
+    # save_results_to_csv(os.getenv('PATH_RESULTADOS_CSV'))
     
     
 def job():
