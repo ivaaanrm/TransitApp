@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Resultado:
-    fecha: str = field(datetime.now().strftime("%d-%m-%Y"))
     causa: str
     nivel: str
     via: str
@@ -16,6 +15,7 @@ class Resultado:
     direccion: str
     inicio: str
     observaciones: str
+    fecha: str = field(default=datetime.now().strftime("%d-%m-%Y"))
 
 class Message:
     @staticmethod
