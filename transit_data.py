@@ -1,9 +1,11 @@
 import csv
 from typing import List
-from dataclasses import dataclass
+from datetime import datetime
+from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Resultado:
+    fecha: str = field(datetime.now().strftime("%d-%m-%Y"))
     causa: str
     nivel: str
     via: str
