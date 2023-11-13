@@ -9,5 +9,5 @@ class Params:
     # Crawler params
     URL = "https://cit.transit.gencat.cat/cit/AppJava/views/incidents.xhtml"
     DEMARCACIONES = ["Barcelona"]
-    VIAS = ["AP-7", "B-23", "C-17", "C-33", "B-20"]
+    VIAS = ["AP-7", "B-23", "C-17", "B-20"]
     OBRAS = False
