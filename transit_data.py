@@ -1,7 +1,7 @@
 import csv
 from typing import List
 from datetime import datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 @dataclass(frozen=True)
 class Resultado:
@@ -48,7 +48,7 @@ def save_results_to_csv(results: List[Resultado], csv_filename: str):
 
         # Write results to CSV
         for result in results:
-            writer.writerow(result.__dict__)
+            writer.writerow(asdict(result))
 
 def load_results_from_csv(csv_filename: str) -> List[Resultado]:
     results = []

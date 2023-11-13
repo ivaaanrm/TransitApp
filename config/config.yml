@@ -1,0 +1,18 @@
+webdriver:
+  headless: true
+  no_sandbox: true
+  timeout: 10
+
+crawler:
+  url: "https://cit.transit.gencat.cat/cit/AppJava/views/incidents.xhtml"
+  demarcaciones:
+    - "Barcelona"
+  vias:
+    - "AP-7"
+    - "B-23"
+    - "C-17"
+    - "B-20"
+  obras: true
+
+app:
+  interval: 5

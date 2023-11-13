@@ -1,48 +1,32 @@
-import requests
-from bs4 import BeautifulSoup
-from telegram import Bot
-from dotenv import load_dotenv
 import os
 import asyncio
 import logging
-import json
 import time
 import schedule
-from datetime import datetime
+from bs4 import BeautifulSoup
+from telegram import Bot
+from dotenv import load_dotenv
+from pathlib import Path
 from typing import List
 from bs4 import BeautifulSoup
-from bs4.element import PageElement
+
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support import expected_conditions as EC
 
-from params import Params
-from transit_data import Resultado, Message
+from config.config import get_params
 from transit_data import save_results_to_csv, load_results_from_csv
+from transit_data import Resultado, Message
 
 
 load_dotenv()
-
-logging.basicConfig(
-    filename=os.getenv('PATH_LOGS'),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-console_handler.setFormatter(formatter)
-
-logging.getLogger().addHandler(console_handler)
+params = get_params(os.getenv("CONFIG_PATH"))
 
 class TransitBot:
     def __init__(self, token, chat_id):
@@ -67,9 +51,9 @@ class TransitCrawler:
         self.last_results = []
 
     def setup_options(self):
-        if Params.HEADLESS:
+        if params.HEADLESS:
             self.options.add_argument("--headless")
-        if Params.NO_SANDBOX:
+        if params.NO_SANDBOX:
             self.options.add_argument("--no-sandbox")
 
     def initialize_driver(self):
@@ -85,7 +69,7 @@ class TransitCrawler:
         try:
             self.driver.get(self.url)
             time.sleep(1)
-            self.set_up_web_page(Params.DEMARCACIONES, Params.VIAS, Params.OBRAS)
+            self.set_up_web_page(params.DEMARCACIONES, params.VIAS, params.OBRAS)
             time.sleep(1)
             return self.driver.page_source
         except WebDriverException as e:
@@ -135,8 +119,8 @@ class TransitCrawler:
     
     def set_up_web_page(self, demaraciones: List[str] = [], vias: List[str] = [], obras: bool = False) -> None:
         
-        input_demarcacion = WebDriverWait(self.driver, Params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm"]/div[1]/div/div[2]/div[2]/span/span[1]/span/ul/li/input')))
-        input_vias = WebDriverWait(self.driver, Params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm"]/div[1]/div/div[3]/div[2]/span/span[1]/span/ul/li/input')))
+        input_demarcacion = WebDriverWait(self.driver, params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm"]/div[1]/div/div[2]/div[2]/span/span[1]/span/ul/li/input')))
+        input_vias = WebDriverWait(self.driver, params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm"]/div[1]/div/div[3]/div[2]/span/span[1]/span/ul/li/input')))
         
         for dema in demaraciones:
             input_demarcacion.send_keys(dema)
@@ -149,20 +133,42 @@ class TransitCrawler:
             time.sleep(1)
         
         if obras:
-            checkbox = WebDriverWait(self.driver, Params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm:checkObres"]')))
+            checkbox = WebDriverWait(self.driver, params.TIMEOUT).until(EC.presence_of_element_located((By.XPATH, '//*[@id="llistaResultatsForm:checkObres"]')))
             checkbox.click()
             
         
-        button = WebDriverWait(self.driver, Params.TIMEOUT).until(EC.element_to_be_clickable((By.ID, 'btnCerca')))
+        button = WebDriverWait(self.driver, params.TIMEOUT).until(EC.element_to_be_clickable((By.ID, 'btnCerca')))
         button.click()
 
 
 previous_results = []
 
+def setup_logging():
+    log_file_path = Path(os.getenv('PATH_LOGS'))
+
+    # Ensure the directory exists
+    log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    logging.basicConfig(
+        filename=log_file_path,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logging.INFO
+    )
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+
+    logging.getLogger().addHandler(console_handler)
+    
+
 async def main():
     global previous_results 
-        
-    transit_crawler = TransitCrawler(Params.URL)
+
+    transit_crawler = TransitCrawler(params.URL)
+    
     transit_bot = TransitBot(
         token=os.getenv("TELEGRAM_BOT_TOKEN"), 
         chat_id=os.getenv("TELEGRAM_CHAT_ID")
@@ -178,7 +184,7 @@ async def main():
     previous_results = resultados    
     message_text = Message.update_traffic_message(resultados)
     await transit_bot.send_message(message_text)
-    # save_results_to_csv(os.getenv('PATH_RESULTADOS_CSV'))
+    save_results_to_csv(resultados, os.getenv('PATH_RESULTADOS_CSV'))
     
     
 def job():
@@ -186,6 +192,9 @@ def job():
     asyncio.run(main())
 
 if __name__ == "__main__":
+    setup_logging()
+    # asyncio.run(main())
+
     schedule.every(1).minutes.do(job)
 
     while True:
